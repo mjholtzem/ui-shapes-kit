@@ -4,6 +4,10 @@
 
 create and edit UI directly in the editor, without the need for textures
 
+Originally created by Stefan Kernjak this fork is meant to 
+update this library to work with most recent versions of Unity as a package
+and add some quality of life features that I personally need for my own projects
+
 ## Features
 
 - create flat ui without textures
