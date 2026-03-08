@@ -44,3 +44,7 @@ sysinfo.txt
 # Mac OS X hidden files
 .DS_Store
 /Logs
+
+# Allow Unity Package Manager trailing tilde folders
+!*~
+!/Samples~/
