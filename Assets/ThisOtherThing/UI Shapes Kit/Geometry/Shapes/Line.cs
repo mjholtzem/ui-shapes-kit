@@ -1,9 +1,10 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 
 namespace ThisOtherThing.UI.Shapes
 {
+	[RequireComponent(typeof(CanvasRenderer))]
 	[AddComponentMenu("UI/Shapes/Line", 30)]
 	public class Line : MaskableGraphic, IShape
 	{

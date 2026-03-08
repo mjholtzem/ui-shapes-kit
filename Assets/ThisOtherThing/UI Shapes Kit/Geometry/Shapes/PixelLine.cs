@@ -1,9 +1,10 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 
 namespace ThisOtherThing.UI.Shapes
 {
+	[RequireComponent(typeof(CanvasRenderer))]
 	[AddComponentMenu("UI/Shapes/Pixel Line", 100)]
 	public class PixelLine : MaskableGraphic, IShape
 	{
