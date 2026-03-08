@@ -1,10 +1,11 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 
 namespace ThisOtherThing.UI.Shapes
 {
 
+	[RequireComponent(typeof(CanvasRenderer))]
 	[AddComponentMenu("UI/Shapes/Polygon", 30)]
 	public class Polygon : MaskableGraphic, IShape
 	{
