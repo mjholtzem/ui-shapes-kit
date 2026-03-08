@@ -83,7 +83,17 @@ namespace ThisOtherThing.UI.ShapeUtils
 			{
 				None,
 				Uniform,
-				Individual
+				Individual,
+				UniformRelative,
+				IndividualRelative
+			}
+
+			public enum RelativeReference
+			{
+				Height,
+				Width,
+				Max,
+				Min
 			}
 
 			public enum ResolutionType
@@ -96,18 +106,28 @@ namespace ThisOtherThing.UI.ShapeUtils
 			public ResolutionType ResolutionMode = ResolutionType.Uniform;
 
 			public float UniformRadius = 15.0f;
+			public float UniformRadiusRelative = 0.5f;
+			public RelativeReference UniformRelativeReference = RelativeReference.Min;
 			public bool UseMaxRadius = false;
 
 			public float TLRadius = 15.0f;
+			public float TLRadiusRelative = 0.5f;
+			public RelativeReference TLRelativeReference = RelativeReference.Min;
 			public RoundedCornerProperties TLResolution = new RoundedCornerProperties();
 
 			public float TRRadius = 15.0f;
+			public float TRRadiusRelative = 0.5f;
+			public RelativeReference TRRelativeReference = RelativeReference.Min;
 			public RoundedCornerProperties TRResolution = new RoundedCornerProperties();
 
 			public float BRRadius = 15.0f;
+			public float BRRadiusRelative = 0.5f;
+			public RelativeReference BRRelativeReference = RelativeReference.Min;
 			public RoundedCornerProperties BRResolution = new RoundedCornerProperties();
 
 			public float BLRadius = 15.0f;
+			public float BLRadiusRelative = 0.5f;
+			public RelativeReference BLRelativeReference = RelativeReference.Min;
 			public RoundedCornerProperties BLResolution = new RoundedCornerProperties();
 
 			public RoundedCornerProperties UniformResolution = new RoundedCornerProperties();
@@ -140,11 +160,23 @@ namespace ThisOtherThing.UI.ShapeUtils
 							AdjustedBLRadius = AdjustedTLRadius;
 						}
 						break;
+					case RoundedType.UniformRelative:
+						AdjustedTLRadius = GetRelativeRadius(UniformRadiusRelative, UniformRelativeReference, rect);
+						AdjustedTRRadius = AdjustedTLRadius;
+						AdjustedBRRadius = AdjustedTLRadius;
+						AdjustedBLRadius = AdjustedTLRadius;
+						break;
 					case RoundedType.Individual:
 						AdjustedTLRadius = TLRadius;
 						AdjustedTRRadius = TRRadius;
 						AdjustedBRRadius = BRRadius;
 						AdjustedBLRadius = BLRadius;
+						break;
+					case RoundedType.IndividualRelative:
+						AdjustedTLRadius = GetRelativeRadius(TLRadiusRelative, TLRelativeReference, rect);
+						AdjustedTRRadius = GetRelativeRadius(TRRadiusRelative, TRRelativeReference, rect);
+						AdjustedBRRadius = GetRelativeRadius(BRRadiusRelative, BRRelativeReference, rect);
+						AdjustedBLRadius = GetRelativeRadius(BLRadiusRelative, BLRelativeReference, rect);
 						break;
 					case RoundedType.None:
 						AdjustedTLRadius = 0.0f;
@@ -172,6 +204,23 @@ namespace ThisOtherThing.UI.ShapeUtils
 				}
 			}
 
+			private float GetRelativeRadius(float radiusRelative, RelativeReference reference, Rect rect)
+			{
+				switch (reference)
+				{
+					case RelativeReference.Height:
+						return radiusRelative * rect.height;
+					case RelativeReference.Width:
+						return radiusRelative * rect.width;
+					case RelativeReference.Max:
+						return radiusRelative * Mathf.Max(rect.width, rect.height);
+					case RelativeReference.Min:
+						return radiusRelative * Mathf.Min(rect.width, rect.height);
+					default:
+						throw new System.ArgumentOutOfRangeException();
+				}
+			}
+
 			public void OnCheck(Rect rect)
 			{
 				float shorterSide = Mathf.Min(rect.width, rect.height);
@@ -183,11 +232,20 @@ namespace ThisOtherThing.UI.ShapeUtils
 					case RoundedType.Uniform:
 						UniformRadius = Mathf.Clamp(UniformRadius, 0.0f, halfShorterSide);
 						break;
+					case RoundedType.UniformRelative:
+						UniformRadiusRelative = Mathf.Max(UniformRadiusRelative, 0.0f);
+						break;
 					case RoundedType.Individual:
 						TLRadius = Mathf.Max(TLRadius, 0.0f);
 						TRRadius = Mathf.Max(TRRadius, 0.0f);
 						BRRadius = Mathf.Max(BRRadius, 0.0f);
 						BLRadius = Mathf.Max(BLRadius, 0.0f);
+						break;
+					case RoundedType.IndividualRelative:
+						TLRadiusRelative = Mathf.Max(TLRadiusRelative, 0.0f);
+						TRRadiusRelative = Mathf.Max(TRRadiusRelative, 0.0f);
+						BRRadiusRelative = Mathf.Max(BRRadiusRelative, 0.0f);
+						BLRadiusRelative = Mathf.Max(BLRadiusRelative, 0.0f);
 						break;
 				}
 

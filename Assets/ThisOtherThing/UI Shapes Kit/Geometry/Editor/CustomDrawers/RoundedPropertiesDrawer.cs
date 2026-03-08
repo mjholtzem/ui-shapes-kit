@@ -58,6 +58,11 @@ public class RoundedPropertiesDrawer : PropertyDrawer
 						EditorGUI.PropertyField(propertyPosition, property.FindPropertyRelative("UniformRadius"), new GUIContent("Radius"));
 					}
 					break;
+				case RoundedProperties.RoundedType.UniformRelative:
+					EditorGUI.PropertyField(propertyPosition, property.FindPropertyRelative("UniformRelativeReference"), new GUIContent("Relative To"));
+					propertyPosition.y += EditorGUIUtility.singleLineHeight;
+					EditorGUI.PropertyField(propertyPosition, property.FindPropertyRelative("UniformRadiusRelative"), new GUIContent("Radius (Relative)"));
+					break;
 				case RoundedProperties.RoundedType.Individual:
 					EditorGUI.PropertyField(propertyPosition, property.FindPropertyRelative("TLRadius"), new GUIContent("Top Left"));
 					propertyPosition.y += EditorGUIUtility.singleLineHeight * 1.25f;
@@ -69,6 +74,40 @@ public class RoundedPropertiesDrawer : PropertyDrawer
 					propertyPosition.y += EditorGUIUtility.singleLineHeight * 1.25f;
 
 					EditorGUI.PropertyField(propertyPosition, property.FindPropertyRelative("BLRadius"), new GUIContent("Bottom Left"));
+					propertyPosition.y += EditorGUIUtility.singleLineHeight * 0.25f;
+
+					break;
+				case RoundedProperties.RoundedType.IndividualRelative:
+					EditorGUI.PropertyField(propertyPosition, property.FindPropertyRelative("TLRelativeReference"), GUIContent.none);
+					propertyPosition.x += propertyPosition.width * 0.5f;
+					propertyPosition.width *= 0.5f;
+					EditorGUI.PropertyField(propertyPosition, property.FindPropertyRelative("TLRadiusRelative"), new GUIContent("TL"));
+					propertyPosition.x -= propertyPosition.width * 2.0f;
+					propertyPosition.width *= 2.0f;
+					propertyPosition.y += EditorGUIUtility.singleLineHeight * 1.25f;
+
+					EditorGUI.PropertyField(propertyPosition, property.FindPropertyRelative("TRRelativeReference"), GUIContent.none);
+					propertyPosition.x += propertyPosition.width * 0.5f;
+					propertyPosition.width *= 0.5f;
+					EditorGUI.PropertyField(propertyPosition, property.FindPropertyRelative("TRRadiusRelative"), new GUIContent("TR"));
+					propertyPosition.x -= propertyPosition.width * 2.0f;
+					propertyPosition.width *= 2.0f;
+					propertyPosition.y += EditorGUIUtility.singleLineHeight * 1.25f;
+
+					EditorGUI.PropertyField(propertyPosition, property.FindPropertyRelative("BRRelativeReference"), GUIContent.none);
+					propertyPosition.x += propertyPosition.width * 0.5f;
+					propertyPosition.width *= 0.5f;
+					EditorGUI.PropertyField(propertyPosition, property.FindPropertyRelative("BRRadiusRelative"), new GUIContent("BR"));
+					propertyPosition.x -= propertyPosition.width * 2.0f;
+					propertyPosition.width *= 2.0f;
+					propertyPosition.y += EditorGUIUtility.singleLineHeight * 1.25f;
+
+					EditorGUI.PropertyField(propertyPosition, property.FindPropertyRelative("BLRelativeReference"), GUIContent.none);
+					propertyPosition.x += propertyPosition.width * 0.5f;
+					propertyPosition.width *= 0.5f;
+					EditorGUI.PropertyField(propertyPosition, property.FindPropertyRelative("BLRadiusRelative"), new GUIContent("BL"));
+					propertyPosition.x -= propertyPosition.width * 2.0f;
+					propertyPosition.width *= 2.0f;
 					propertyPosition.y += EditorGUIUtility.singleLineHeight * 0.25f;
 
 					break;
@@ -167,8 +206,15 @@ public class RoundedPropertiesDrawer : PropertyDrawer
 				}
 
 				break;
+			case RoundedProperties.RoundedType.UniformRelative:
+				if (showRadiusSettings)
+				{
+					height += EditorGUIUtility.singleLineHeight * 2.0f;
+				}
+				break;
 
 			case RoundedProperties.RoundedType.Individual:
+			case RoundedProperties.RoundedType.IndividualRelative:
 				if (showRadiusSettings)
 				{
 					height += EditorGUIUtility.singleLineHeight * 5.0f;
