@@ -1,0 +1,20 @@
+{
+  "name": "com.thisotherthing.ui-shapes-kit",
+  "version": "1.0.0",
+  "displayName": "UI Shapes Kit",
+  "description": "Create and edit UI directly in the editor, without the need for textures.",
+  "unity": "2020.3",
+  "dependencies": {
+    "com.unity.ugui": "1.0.0"
+  },
+  "keywords": [
+    "ui",
+    "shapes",
+    "geometry",
+    "thisotherthing"
+  ],
+  "author": {
+    "name": "this other thing",
+    "url": "https://www.thisotherthing.co/"
+  }
+}
