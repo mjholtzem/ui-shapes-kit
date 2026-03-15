@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEditor;
 
 using PointListProperties = ThisOtherThing.UI.ShapeUtils.PointsList.PointListProperties;
@@ -465,6 +465,11 @@ public class PointListPropertiesDrawer : PropertyDrawer
 		);
 		propertyPosition.y += EditorGUIUtility.singleLineHeight * 3.5f;
 
+		SerializedProperty thicknessMultipliersProp = property.FindPropertyRelative("ThicknessMultipliers");
+		EditorGUI.PropertyField(propertyPosition, thicknessMultipliersProp, new GUIContent("Thickness Multipliers"), true);
+		propertyPosition.y += EditorGUI.GetPropertyHeight(thicknessMultipliersProp);
+		propertyPosition.y += EditorGUIUtility.singleLineHeight * 0.5f;
+
 		if (currentGenerator == PointListGeneratorData.Generators.Custom)
 		EditorGUI.PropertyField(
 			propertyPosition,
@@ -551,6 +556,10 @@ public class PointListPropertiesDrawer : PropertyDrawer
 				propHeight += EditorGUIUtility.singleLineHeight * 7.5f;
 				break;
 		}
+
+		SerializedProperty thicknessMultipliersProp = property.FindPropertyRelative("ThicknessMultipliers");
+		propHeight += EditorGUI.GetPropertyHeight(thicknessMultipliersProp);
+		propHeight += EditorGUIUtility.singleLineHeight * 0.5f;
 
 		return propHeight;
 	}
