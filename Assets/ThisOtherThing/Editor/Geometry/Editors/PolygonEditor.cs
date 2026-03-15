@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEditor;
 using UnityEditor.UI;
 
@@ -17,6 +17,8 @@ public class PolygonEditor : GraphicEditor
 	protected SerializedProperty shapePropertiesProp;
 	protected SerializedProperty pointListPropertiesProp;
 	protected SerializedProperty polygonPropertiesProp;
+	protected SerializedProperty outlinePropertiesProp;
+	protected SerializedProperty linePropertiesProp;
 	protected SerializedProperty shadowPropertiesProp;
 	protected SerializedProperty antiAliasingPropertiesProp;
 
@@ -33,6 +35,8 @@ public class PolygonEditor : GraphicEditor
 		shapePropertiesProp = serializedObject.FindProperty("ShapeProperties");
 		pointListPropertiesProp = serializedObject.FindProperty("PointListsProperties");
 		polygonPropertiesProp = serializedObject.FindProperty("PolygonProperties");
+		outlinePropertiesProp = serializedObject.FindProperty("OutlineProperties");
+		linePropertiesProp = serializedObject.FindProperty("LineProperties");
 		shadowPropertiesProp = serializedObject.FindProperty("ShadowProperties");
 		antiAliasingPropertiesProp = serializedObject.FindProperty("AntiAliasingProperties");
 	}
@@ -53,6 +57,7 @@ public class PolygonEditor : GraphicEditor
 		EditorGUILayout.PropertyField(shapePropertiesProp, true);
 		EditorGUILayout.PropertyField(pointListPropertiesProp, true);
 		EditorGUILayout.PropertyField(polygonPropertiesProp, true);
+		EditorGUILayout.PropertyField(outlinePropertiesProp, true);
 
 		EditorGUILayout.PropertyField(shadowPropertiesProp, true);
 		EditorGUILayout.PropertyField(antiAliasingPropertiesProp, true);
@@ -79,12 +84,5 @@ public class PolygonEditor : GraphicEditor
 					polygon.ForceMeshUpdate();
 			}
 		}
-
-
-		// if (!Application.isPlaying && polygon.enabled)
-		// {
-		// 	polygon.enabled = false;
-		// 	polygon.enabled = true;
-		// }
 	}
 }
