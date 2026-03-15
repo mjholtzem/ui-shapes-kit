@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEditor;
 
 public class PointListDrawer
@@ -18,6 +18,18 @@ public class PointListDrawer
 		bool isClosed,
 		int minPoints
 	) {
+		float[] noMults = null;
+		return Draw(ref positions, ref noMults, 0.0f, rectTransform, isClosed, minPoints);
+	}
+
+	public static bool Draw(
+		ref Vector2[] positions,
+		ref float[] thicknessMultipliers,
+		float lineWeight,
+		RectTransform rectTransform,
+		bool isClosed,
+		int minPoints
+	) {
 		bool needsUpdate = false;
 
 		bool runDelete = Event.current.modifiers == EventModifiers.Control;
@@ -25,7 +37,7 @@ public class PointListDrawer
 
 		if (runDelete)
 		{
-			needsUpdate |= DrawRemovePointPosition(ref positions, rectTransform, minPoints);
+			needsUpdate |= DrawRemovePointPosition(ref positions, ref thicknessMultipliers, rectTransform, minPoints);
 		}
 		else
 		{
@@ -35,10 +47,117 @@ public class PointListDrawer
 				needsUpdate |= DrawUpdatePointPosition(ref positions[i], rectTransform, axisSnapping);
 			}
 
-			needsUpdate |= DrawInbetweenButtons(ref positions, rectTransform, isClosed);
+			needsUpdate |= DrawInbetweenButtons(ref positions, ref thicknessMultipliers, rectTransform, isClosed);
+		}
+
+		// draw thickness handles if we have valid data
+		if (thicknessMultipliers != null && lineWeight > 0.0f)
+		{
+			needsUpdate |= DrawThicknessHandles(positions, thicknessMultipliers, lineWeight, rectTransform, isClosed);
 		}
 
 		return needsUpdate;
+	}
+
+	static bool DrawThicknessHandles(
+		Vector2[] positions,
+		float[] thicknessMultipliers,
+		float lineWeight,
+		RectTransform rectTransform,
+		bool isClosed
+	) {
+		if (positions.Length < 2)
+			return false;
+
+		bool needsUpdate = false;
+		float halfWeight = lineWeight * 0.5f;
+
+		Color prevColor = Handles.color;
+
+		for (int i = 0; i < positions.Length; i++)
+		{
+			// compute perpendicular (normal) direction at this point
+			Vector2 tangent;
+
+			if (i == 0 && !isClosed)
+			{
+				tangent = positions[1] - positions[0];
+			}
+			else if (i == positions.Length - 1 && !isClosed)
+			{
+				tangent = positions[i] - positions[i - 1];
+			}
+			else
+			{
+				int prevIdx = (i - 1 + positions.Length) % positions.Length;
+				int nextIdx = (i + 1) % positions.Length;
+				tangent = positions[nextIdx] - positions[prevIdx];
+			}
+
+			float tangentLen = tangent.magnitude;
+			if (tangentLen < 0.001f) continue;
+
+			Vector2 normal = new Vector2(-tangent.y / tangentLen, tangent.x / tangentLen);
+
+			float multiplier = (i < thicknessMultipliers.Length) ? thicknessMultipliers[i] : 1.0f;
+			float handleDist = halfWeight * multiplier;
+
+			Vector3 worldCenter = rectTransform.TransformPoint(positions[i]);
+			Vector3 worldNormal = rectTransform.TransformDirection(new Vector3(normal.x, normal.y, 0.0f)).normalized;
+
+			float handleSize = HandleUtility.GetHandleSize(worldCenter) * 0.07f;
+
+			// draw the thickness visualization line
+			Handles.color = new Color(0.0f, 0.8f, 0.9f, 0.4f);
+			Vector3 innerPos = rectTransform.TransformPoint((Vector3)(positions[i] - normal * handleDist));
+			Vector3 outerPos = rectTransform.TransformPoint((Vector3)(positions[i] + normal * handleDist));
+			Handles.DrawLine(innerPos, outerPos);
+
+			// draw a single handle on the outer side
+			Handles.color = new Color(0.0f, 0.8f, 0.9f, 1.0f);
+			Vector3 handlePos = outerPos;
+
+			EditorGUI.BeginChangeCheck();
+			Vector3 newHandlePos = Handles.Slider(
+				handlePos,
+				worldNormal,
+				handleSize,
+				DrawThicknessHandle,
+				0.0f
+			);
+
+			if (EditorGUI.EndChangeCheck())
+			{
+				// convert back to local space and compute new multiplier
+				Vector3 localNew = rectTransform.InverseTransformPoint(newHandlePos);
+				Vector2 localDelta = new Vector2(localNew.x - positions[i].x, localNew.y - positions[i].y);
+				float newDist = Vector2.Dot(localDelta, normal);
+
+				float newMultiplier = Mathf.Max(0.01f, newDist / halfWeight);
+
+				// ensure array is large enough
+				if (thicknessMultipliers.Length <= i)
+				{
+					// can't resize here since we don't have ref — handled by caller
+				}
+				else
+				{
+					thicknessMultipliers[i] = newMultiplier;
+					needsUpdate = true;
+				}
+			}
+		}
+
+		Handles.color = prevColor;
+		return needsUpdate;
+	}
+
+	static void DrawThicknessHandle(int controlId, Vector3 position, Quaternion rotation, float size, EventType eventType)
+	{
+		Handles.color = new Color(0.0f, 0.8f, 0.9f, 1.0f);
+		Handles.DrawSolidDisc(position, uiNormal, size * 0.8f);
+		Handles.color = new Color(0.0f, 0.5f, 0.6f, 1.0f);
+		Handles.CircleHandleCap(controlId, position, rotation, size * 0.8f, eventType);
 	}
 
 	static bool DrawUpdatePointPosition(
@@ -70,6 +189,7 @@ public class PointListDrawer
 
 	static bool DrawRemovePointPosition(
 		ref Vector2[] positions,
+		ref float[] thicknessMultipliers,
 		RectTransform rectTransform,
 		int minPoints
 	) {
@@ -93,6 +213,16 @@ public class PointListDrawer
 
 				System.Array.Resize(ref positions, positions.Length - 1);
 
+				// keep multipliers in sync
+				if (thicknessMultipliers != null && thicknessMultipliers.Length > i)
+				{
+					for (int j = i; j < thicknessMultipliers.Length - 1; j++)
+					{
+						thicknessMultipliers[j] = thicknessMultipliers[j + 1];
+					}
+					System.Array.Resize(ref thicknessMultipliers, thicknessMultipliers.Length - 1);
+				}
+
 				removedPoint = true;
 			}
 		}
@@ -102,6 +232,7 @@ public class PointListDrawer
 
 	static bool DrawInbetweenButtons(
 		ref Vector2[] positions,
+		ref float[] thicknessMultipliers,
 		RectTransform rectTransform,
 		bool isClosed
 	) {
@@ -135,6 +266,21 @@ public class PointListDrawer
 
 				positions[i+1] = rectTransform.InverseTransformPoint(worldPosition);
 
+				// insert interpolated multiplier at the same index
+				if (thicknessMultipliers != null)
+				{
+					float multA = (i < thicknessMultipliers.Length) ? thicknessMultipliers[i] : 1.0f;
+					float multB = (i + 1 < thicknessMultipliers.Length) ? thicknessMultipliers[i + 1] : 1.0f;
+					float newMult = (multA + multB) * 0.5f;
+
+					System.Array.Resize(ref thicknessMultipliers, thicknessMultipliers.Length + 1);
+					for (int j = thicknessMultipliers.Length - 1; j > i + 1; j--)
+					{
+						thicknessMultipliers[j] = thicknessMultipliers[j - 1];
+					}
+					thicknessMultipliers[i + 1] = newMult;
+				}
+
 				addedPoint = true;
 			}
 		}
@@ -160,6 +306,15 @@ public class PointListDrawer
 				if (isClosed && positions.Length == 3)
 				{
 					positions[positions.Length - 1].y += 0.1f;
+				}
+
+				// append interpolated multiplier for closed-loop add
+				if (thicknessMultipliers != null)
+				{
+					float multA = (0 < thicknessMultipliers.Length) ? thicknessMultipliers[0] : 1.0f;
+					float multB = (thicknessMultipliers.Length > 0) ? thicknessMultipliers[thicknessMultipliers.Length - 1] : 1.0f;
+					System.Array.Resize(ref thicknessMultipliers, thicknessMultipliers.Length + 1);
+					thicknessMultipliers[thicknessMultipliers.Length - 1] = (multA + multB) * 0.5f;
 				}
 
 				addedPoint = true;
