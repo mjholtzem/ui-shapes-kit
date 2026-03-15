@@ -10,14 +10,20 @@ namespace ThisOtherThing.UI.Shapes
 	public class Polygon : MaskableGraphic, IShape
 	{
 
-		public GeoUtils.ShapeProperties ShapeProperties =
-			new GeoUtils.ShapeProperties();
+		public GeoUtils.OutlineShapeProperties ShapeProperties =
+			new GeoUtils.OutlineShapeProperties();
 
 		public ShapeUtils.PointsList.PointListsProperties PointListsProperties =
 			new ShapeUtils.PointsList.PointListsProperties();
 
 		public ShapeUtils.Polygons.PolygonProperties PolygonProperties =
 			new ShapeUtils.Polygons.PolygonProperties();
+
+		public GeoUtils.OutlineProperties OutlineProperties =
+			new GeoUtils.OutlineProperties();
+
+		public ShapeUtils.Lines.LineProperties LineProperties =
+			new ShapeUtils.Lines.LineProperties();
 
 		public GeoUtils.ShadowsProperties ShadowProperties = new GeoUtils.ShadowsProperties();
 
@@ -71,8 +77,7 @@ namespace ThisOtherThing.UI.Shapes
 				pointsListData[i].IsClosed = true;
 			}
 
-
-
+			OutlineProperties.OnCheck();
 			AntiAliasingProperties.OnCheck();
 
 			ForceMeshUpdate();
@@ -97,7 +102,11 @@ namespace ThisOtherThing.UI.Shapes
 			pixelRect = RectTransformUtility.PixelAdjustRect(rectTransform, canvas);
 
 			AntiAliasingProperties.UpdateAdjusted(canvas);
+			OutlineProperties.UpdateAdjusted();
 			ShadowProperties.UpdateAdjusted();
+
+			// force the line properties to always be closed for polygon outlines
+			LineProperties.Closed = true;
 
 			for (int i = 0; i < PointListsProperties.PointListProperties.Length; i++)
 			{
@@ -105,6 +114,7 @@ namespace ThisOtherThing.UI.Shapes
 				PointListsProperties.PointListProperties[i].SetPoints();
 			}
 
+			// draw fill shadows
 			for (int i = 0; i < PointListsProperties.PointListProperties.Length; i++)
 			{
 				if (
@@ -113,33 +123,35 @@ namespace ThisOtherThing.UI.Shapes
 				) {
 					PolygonProperties.UpdateAdjusted(PointListsProperties.PointListProperties[i]);
 
-					// shadows
 					if (ShadowProperties.ShadowsEnabled)
 					{
-						for (int j = 0; j < ShadowProperties.Shadows.Length; j++)
+						if (ShapeProperties.DrawFill && ShapeProperties.DrawFillShadow)
 						{
-							edgeGradientData.SetActiveData(
-								1.0f - ShadowProperties.Shadows[j].Softness,
-								ShadowProperties.Shadows[j].Size,
-								AntiAliasingProperties.Adjusted
-							);
+							for (int j = 0; j < ShadowProperties.Shadows.Length; j++)
+							{
+								edgeGradientData.SetActiveData(
+									1.0f - ShadowProperties.Shadows[j].Softness,
+									ShadowProperties.Shadows[j].Size,
+									AntiAliasingProperties.Adjusted
+								);
 
-							ShapeUtils.Polygons.AddPolygon(
-								ref vh,
-								PolygonProperties,
-								PointListsProperties.PointListProperties[i],
-								ShadowProperties.GetCenterOffset(pixelRect.center, j),
-								ShadowProperties.Shadows[j].Color,
-								GeoUtils.ZeroV2,
-								ref pointsListData[i],
-								edgeGradientData
-							);
+								ShapeUtils.Polygons.AddPolygon(
+									ref vh,
+									PolygonProperties,
+									PointListsProperties.PointListProperties[i],
+									ShadowProperties.GetCenterOffset(pixelRect.center, j),
+									ShadowProperties.Shadows[j].Color,
+									GeoUtils.ZeroV2,
+									ref pointsListData[i],
+									edgeGradientData
+								);
+							}
 						}
 					}
 				}
 			}
 
-
+			// draw fill
 			for (int i = 0; i < PointListsProperties.PointListProperties.Length; i++)
 			{
 				if (
@@ -148,8 +160,7 @@ namespace ThisOtherThing.UI.Shapes
 				) {
 					PolygonProperties.UpdateAdjusted(PointListsProperties.PointListProperties[i]);
 
-					// fill
-					if (ShadowProperties.ShowShape)
+					if (ShadowProperties.ShowShape && ShapeProperties.DrawFill)
 					{
 						if (AntiAliasingProperties.Adjusted > 0.0f)
 						{
@@ -178,7 +189,78 @@ namespace ThisOtherThing.UI.Shapes
 				}
 			}
 
+			// draw outline shadows
+			for (int i = 0; i < PointListsProperties.PointListProperties.Length; i++)
+			{
+				if (
+					PointListsProperties.PointListProperties[i].Positions != null &&
+					PointListsProperties.PointListProperties[i].Positions.Length > 2
+				) {
+					if (ShadowProperties.ShadowsEnabled)
+					{
+						if (ShapeProperties.DrawOutline && ShapeProperties.DrawOutlineShadow)
+						{
+							for (int j = 0; j < ShadowProperties.Shadows.Length; j++)
+							{
+								edgeGradientData.SetActiveData(
+									1.0f - ShadowProperties.Shadows[j].Softness,
+									ShadowProperties.Shadows[j].Size,
+									AntiAliasingProperties.Adjusted
+								);
 
+								ShapeUtils.Lines.AddLine(
+									ref vh,
+									LineProperties,
+									PointListsProperties.PointListProperties[i],
+									ShadowProperties.GetCenterOffset(GeoUtils.ZeroV2, j),
+									OutlineProperties,
+									ShadowProperties.Shadows[j].Color,
+									GeoUtils.ZeroV2,
+									ref pointsListData[i],
+									edgeGradientData
+								);
+							}
+						}
+					}
+				}
+			}
+
+			// draw outline
+			for (int i = 0; i < PointListsProperties.PointListProperties.Length; i++)
+			{
+				if (
+					PointListsProperties.PointListProperties[i].Positions != null &&
+					PointListsProperties.PointListProperties[i].Positions.Length > 2
+				) {
+					if (ShadowProperties.ShowShape && ShapeProperties.DrawOutline)
+					{
+						if (AntiAliasingProperties.Adjusted > 0.0f)
+						{
+							edgeGradientData.SetActiveData(
+								1.0f,
+								0.0f,
+								AntiAliasingProperties.Adjusted
+							);
+						}
+						else
+						{
+							edgeGradientData.Reset();
+						}
+
+						ShapeUtils.Lines.AddLine(
+							ref vh,
+							LineProperties,
+							PointListsProperties.PointListProperties[i],
+							GeoUtils.ZeroV2,
+							OutlineProperties,
+							ShapeProperties.OutlineColor,
+							GeoUtils.ZeroV2,
+							ref pointsListData[i],
+							edgeGradientData
+						);
+					}
+				}
+			}
 		}
 
 	}
