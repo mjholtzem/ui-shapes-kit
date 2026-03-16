@@ -75,13 +75,44 @@ public class PolygonEditor : GraphicEditor
 				pointListsProperties.PointListProperties[i].ShowHandles &&
 				pointListsProperties.PointListProperties[i].GeneratorData.Generator == ThisOtherThing.UI.ShapeUtils.PointsList.PointListGeneratorData.Generators.Custom
 			) {
-				if (PointListDrawer.Draw(
-					ref pointListsProperties.PointListProperties[i].Positions,
-					rectTransform,
-					true,
-					3
-				))
-					polygon.ForceMeshUpdate();
+				var plp = pointListsProperties.PointListProperties[i];
+
+				bool drawsOutline = polygon.ShapeProperties.DrawOutline;
+				float outlineWeight = drawsOutline ? polygon.OutlineProperties.LineWeight : 0.0f;
+
+				if (drawsOutline)
+				{
+					// ensure ThicknessMultipliers array matches Positions length
+					if (plp.ThicknessMultipliers == null || plp.ThicknessMultipliers.Length != plp.Positions.Length)
+					{
+						float[] newMults = new float[plp.Positions.Length];
+						for (int j = 0; j < newMults.Length; j++)
+						{
+							newMults[j] = (plp.ThicknessMultipliers != null && j < plp.ThicknessMultipliers.Length) ? plp.ThicknessMultipliers[j] : 1.0f;
+						}
+						plp.ThicknessMultipliers = newMults;
+					}
+
+					if (PointListDrawer.Draw(
+						ref plp.Positions,
+						ref plp.ThicknessMultipliers,
+						outlineWeight,
+						rectTransform,
+						true,
+						3
+					))
+						polygon.ForceMeshUpdate();
+				}
+				else
+				{
+					if (PointListDrawer.Draw(
+						ref plp.Positions,
+						rectTransform,
+						true,
+						3
+					))
+						polygon.ForceMeshUpdate();
+				}
 			}
 		}
 	}

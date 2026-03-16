@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEditor;
 using UnityEditor.UI;
 
@@ -79,8 +79,22 @@ public class LineEditor : GraphicEditor
 				pointListsProperties.PointListProperties[i].ShowHandles &&
 				pointListsProperties.PointListProperties[i].GeneratorData.Generator == ThisOtherThing.UI.ShapeUtils.PointsList.PointListGeneratorData.Generators.Custom
 			) {
+				// ensure ThicknessMultipliers array matches Positions length
+				var plp = pointListsProperties.PointListProperties[i];
+				if (plp.ThicknessMultipliers == null || plp.ThicknessMultipliers.Length != plp.Positions.Length)
+				{
+					float[] newMults = new float[plp.Positions.Length];
+					for (int j = 0; j < newMults.Length; j++)
+					{
+						newMults[j] = (plp.ThicknessMultipliers != null && j < plp.ThicknessMultipliers.Length) ? plp.ThicknessMultipliers[j] : 1.0f;
+					}
+					plp.ThicknessMultipliers = newMults;
+				}
+
 				if (PointListDrawer.Draw(
-					ref pointListsProperties.PointListProperties[i].Positions,
+					ref plp.Positions,
+					ref plp.ThicknessMultipliers,
+					linearLine.OutlineProperties.LineWeight,
 					rectTransform,
 					linearLine.LineProperties.Closed,
 					2
@@ -88,13 +102,6 @@ public class LineEditor : GraphicEditor
 					linearLine.ForceMeshUpdate();
 			}
 		}
-			
-
-		// if (!Application.isPlaying && linearLine.enabled)
-		// {
-		// 	linearLine.enabled = false;
-		// 	linearLine.enabled = true;
-		// }
 	}
 
 

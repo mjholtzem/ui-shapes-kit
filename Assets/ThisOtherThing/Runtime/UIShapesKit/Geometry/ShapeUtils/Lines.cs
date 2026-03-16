@@ -1,4 +1,4 @@
-﻿//#define CENTER_ROUNDED_CAPS
+//#define CENTER_ROUNDED_CAPS
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -33,6 +33,13 @@ namespace ThisOtherThing.UI.ShapeUtils
 
 		static Vector3 tmpPos = Vector3.zero;
 		static Vector2 tmpPos2 = Vector2.zero;
+
+		static float GetThicknessMultiplier(PointsList.PointsData pointsData, int index)
+		{
+			if (pointsData.ThicknessMultipliers == null || index >= pointsData.ThicknessMultipliers.Count)
+				return 1.0f;
+			return pointsData.ThicknessMultipliers[index];
+		}
 
 		public static void AddLine(
 			ref VertexHelper vh,
@@ -78,8 +85,8 @@ namespace ThisOtherThing.UI.ShapeUtils
 				uvXLength = 1.0f - uvXMin * 2.0f;
 			}
 
-			float innerOffset = outlineProperties.GetCenterDistace() - (outlineProperties.HalfLineWeight + edgeGradientData.ShadowOffset) * edgeGradientData.InnerScale;
-			float outerOffset = outlineProperties.GetCenterDistace() + (outlineProperties.HalfLineWeight + edgeGradientData.ShadowOffset) * edgeGradientData.InnerScale;
+			float centerDist = outlineProperties.GetCenterDistace();
+			float innerOffset, outerOffset;
 
 			float capOffsetAmount = 0.0f;
 
@@ -92,9 +99,14 @@ namespace ThisOtherThing.UI.ShapeUtils
 			int numVertices = vh.currentVertCount;
 			int startVertex = numVertices - 1;
 			int baseIndex;
+			float pointMultiplier;
 
 			uv.x = uvXMin + pointsData.NormalizedPositionDistances[0] * uvXLength;
 			uv.y = 0.0f;
+
+			pointMultiplier = GetThicknessMultiplier(pointsData, 0);
+			innerOffset = centerDist - (outlineProperties.HalfLineWeight * pointMultiplier + edgeGradientData.ShadowOffset) * edgeGradientData.InnerScale;
+			outerOffset = centerDist + (outlineProperties.HalfLineWeight * pointMultiplier + edgeGradientData.ShadowOffset) * edgeGradientData.InnerScale;
 
 			{
 				tmpPos.x = positionOffset.x + pointsData.Positions[0].x + pointsData.PositionNormals[0].x * innerOffset + pointsData.StartCapOffset.x * capOffsetAmount;
@@ -114,6 +126,10 @@ namespace ThisOtherThing.UI.ShapeUtils
 
 			for (int i = 1; i < pointsData.NumPositions - 1; i++)
 			{
+				pointMultiplier = GetThicknessMultiplier(pointsData, i);
+				innerOffset = centerDist - (outlineProperties.HalfLineWeight * pointMultiplier + edgeGradientData.ShadowOffset) * edgeGradientData.InnerScale;
+				outerOffset = centerDist + (outlineProperties.HalfLineWeight * pointMultiplier + edgeGradientData.ShadowOffset) * edgeGradientData.InnerScale;
+
 				uv.x = uvXMin + pointsData.NormalizedPositionDistances[i] * uvXLength;
 				uv.y = 0.0f;
 
@@ -140,6 +156,11 @@ namespace ThisOtherThing.UI.ShapeUtils
 
 			// add end vertices
 			int endIndex = pointsData.NumPositions - 1;
+
+			pointMultiplier = GetThicknessMultiplier(pointsData, endIndex);
+			innerOffset = centerDist - (outlineProperties.HalfLineWeight * pointMultiplier + edgeGradientData.ShadowOffset) * edgeGradientData.InnerScale;
+			outerOffset = centerDist + (outlineProperties.HalfLineWeight * pointMultiplier + edgeGradientData.ShadowOffset) * edgeGradientData.InnerScale;
+
 			uv.x = uvXMin + pointsData.NormalizedPositionDistances[endIndex] * uvXLength;
 			uv.y = 0.0f;
 
@@ -165,6 +186,10 @@ namespace ThisOtherThing.UI.ShapeUtils
 
 			if (lineProperties.Closed)
 			{
+				pointMultiplier = GetThicknessMultiplier(pointsData, 0);
+				innerOffset = centerDist - (outlineProperties.HalfLineWeight * pointMultiplier + edgeGradientData.ShadowOffset) * edgeGradientData.InnerScale;
+				outerOffset = centerDist + (outlineProperties.HalfLineWeight * pointMultiplier + edgeGradientData.ShadowOffset) * edgeGradientData.InnerScale;
+
 				uv.x = 1.0f;
 				uv.y = 0.0f;
 
@@ -193,18 +218,16 @@ namespace ThisOtherThing.UI.ShapeUtils
 			{
 				byte colorAlpha = color.a;
 
-				innerOffset = outlineProperties.GetCenterDistace() - (outlineProperties.HalfLineWeight + edgeGradientData.ShadowOffset);
-				outerOffset = outlineProperties.GetCenterDistace() + (outlineProperties.HalfLineWeight + edgeGradientData.ShadowOffset);
-
-				innerOffset -= edgeGradientData.SizeAdd;
-				outerOffset += edgeGradientData.SizeAdd;
-
 				color.a = 0;
 
 				int outerBaseIndex = numVertices + pointsData.NumPositions * 2;
 
 				if (lineProperties.Closed)
 					outerBaseIndex += 2;
+
+				pointMultiplier = GetThicknessMultiplier(pointsData, 0);
+				innerOffset = centerDist - (outlineProperties.HalfLineWeight * pointMultiplier + edgeGradientData.ShadowOffset) - edgeGradientData.SizeAdd;
+				outerOffset = centerDist + (outlineProperties.HalfLineWeight * pointMultiplier + edgeGradientData.ShadowOffset) + edgeGradientData.SizeAdd;
 
 				uv.x = uvXMin + pointsData.NormalizedPositionDistances[0] * uvXLength;
 				uv.y = 0.0f;
@@ -227,6 +250,10 @@ namespace ThisOtherThing.UI.ShapeUtils
 
 				for (int i = 1; i < pointsData.NumPositions; i++)
 				{
+					pointMultiplier = GetThicknessMultiplier(pointsData, i);
+					innerOffset = centerDist - (outlineProperties.HalfLineWeight * pointMultiplier + edgeGradientData.ShadowOffset) - edgeGradientData.SizeAdd;
+					outerOffset = centerDist + (outlineProperties.HalfLineWeight * pointMultiplier + edgeGradientData.ShadowOffset) + edgeGradientData.SizeAdd;
+
 					uv.x = uvXMin + pointsData.NormalizedPositionDistances[i] * uvXLength;
 					uv.y = 0.0f;
 
@@ -258,6 +285,10 @@ namespace ThisOtherThing.UI.ShapeUtils
 				if (lineProperties.Closed)
 				{
 					int lastIndex = pointsData.NumPositions;
+
+					pointMultiplier = GetThicknessMultiplier(pointsData, 0);
+					innerOffset = centerDist - (outlineProperties.HalfLineWeight * pointMultiplier + edgeGradientData.ShadowOffset) - edgeGradientData.SizeAdd;
+					outerOffset = centerDist + (outlineProperties.HalfLineWeight * pointMultiplier + edgeGradientData.ShadowOffset) + edgeGradientData.SizeAdd;
 
 					uv.x = 1.0f;
 					uv.y = 0.0f;

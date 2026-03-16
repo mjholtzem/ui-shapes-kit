@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 using ThisOtherThing.Utils;
@@ -20,6 +20,7 @@ namespace ThisOtherThing.UI.ShapeUtils
 		static Vector2 tmpForwPos;
 
 		static List<Vector2> tmpCachedPositions = new List<Vector2>();
+		static List<float> tmpCachedMultipliers = new List<float>();
 
 		[System.Serializable]
 		public class PointListsProperties
@@ -48,7 +49,18 @@ namespace ThisOtherThing.UI.ShapeUtils
 			[MinAttribute(0.0f)] public float RoundingDistance = 0.0f;
 			public RoundingProperties CornerRounding = new RoundingProperties();
 
+			public float[] ThicknessMultipliers;
+
 			public bool ShowHandles = true;
+
+			public float GetThicknessMultiplier(int index)
+			{
+				if (ThicknessMultipliers == null || ThicknessMultipliers.Length == 0)
+					return 1.0f;
+				if (index >= ThicknessMultipliers.Length)
+					return 1.0f;
+				return ThicknessMultipliers[index];
+			}
 
 			public void SetPoints()
 			{
@@ -140,6 +152,8 @@ namespace ThisOtherThing.UI.ShapeUtils
 			public Vector2[] EndCapUVs;
 
 			public float LineWeight;
+
+			public List<float> ThicknessMultipliers;
 		}
 
 		public static void SetPositions(
@@ -151,14 +165,22 @@ namespace ThisOtherThing.UI.ShapeUtils
 				lineData.Positions = new List<Vector2>(pointListProperties.Positions.Length);
 			}
 
+			if (lineData.ThicknessMultipliers == null)
+			{
+				lineData.ThicknessMultipliers = new List<float>(pointListProperties.Positions.Length);
+			}
+
 			CheckMinPointDistances(
 				ref pointListProperties.Positions,
 				ref tmpCachedPositions,
+				pointListProperties,
+				ref tmpCachedMultipliers,
 				lineData.LineWeight * 0.5f,
 				lineData.IsClosed
 			);
 
 			lineData.Positions.Clear();
+			lineData.ThicknessMultipliers.Clear();
 
 
 			int inputNumPositions = tmpCachedPositions.Count;
@@ -177,12 +199,13 @@ namespace ThisOtherThing.UI.ShapeUtils
 					tmpCachedPositions[0],
 					tmpCachedPositions[1],
 					pointListProperties,
-					0
+					tmpCachedMultipliers[0]
 				);
 			}
 			else
 			{
 				lineData.Positions.Add(tmpCachedPositions[0]);
+				lineData.ThicknessMultipliers.Add(tmpCachedMultipliers[0]);
 			}
 
 			for (int i = 1; i < inputNumPositions - 1; i++)
@@ -193,7 +216,7 @@ namespace ThisOtherThing.UI.ShapeUtils
 					tmpCachedPositions[i],
 					tmpCachedPositions[i+1],
 					pointListProperties,
-					i
+					tmpCachedMultipliers[i]
 				);
 
 			}
@@ -207,12 +230,13 @@ namespace ThisOtherThing.UI.ShapeUtils
 					tmpCachedPositions[inputNumPositions-1],
 					tmpCachedPositions[0],
 					pointListProperties,
-					inputNumPositions-1
+					tmpCachedMultipliers[inputNumPositions-1]
 				);
 			}
 			else
 			{
 				lineData.Positions.Add(tmpCachedPositions[inputNumPositions-1]);
+				lineData.ThicknessMultipliers.Add(tmpCachedMultipliers[inputNumPositions-1]);
 			}
 
 			lineData.NumPositions = lineData.Positions.Count;
@@ -221,18 +245,24 @@ namespace ThisOtherThing.UI.ShapeUtils
 		static void CheckMinPointDistances(
 			ref Vector2[] inPositions,
 			ref List<Vector2> outPositions,
+			PointListProperties pointListProperties,
+			ref List<float> outMultipliers,
 			float minDistance,
 			bool isClosed
 		) {
 			outPositions.Clear();
+			outMultipliers.Clear();
 
 			if (outPositions.Capacity < inPositions.Length)
 				outPositions.Capacity = inPositions.Length;
+			if (outMultipliers.Capacity < inPositions.Length)
+				outMultipliers.Capacity = inPositions.Length;
 
 			float minSqrDistance = minDistance * minDistance;
 			float sqrDistance;
 
 			outPositions.Add(inPositions[0]);
+			outMultipliers.Add(pointListProperties.GetThicknessMultiplier(0));
 
 			for (int i = 2; i < inPositions.Length; i++)
 			{
@@ -241,7 +271,13 @@ namespace ThisOtherThing.UI.ShapeUtils
 
 				sqrDistance = tmpPos.x * tmpPos.x + tmpPos.y * tmpPos.y;
 
-				if (sqrDistance < minSqrDistance)
+				// only merge close points if their thickness multipliers match;
+				// preserve points with distinct multipliers to maintain intentional thickness variation
+				float multPrev = pointListProperties.GetThicknessMultiplier(i-1);
+				float multCurr = pointListProperties.GetThicknessMultiplier(i);
+				bool multipliersMatch = Mathf.Approximately(multPrev, multCurr);
+
+				if (sqrDistance < minSqrDistance && multipliersMatch)
 				{
 					tmpPos.x *= 0.5f;
 					tmpPos.x += inPositions[i-1].x;
@@ -250,18 +286,21 @@ namespace ThisOtherThing.UI.ShapeUtils
 					tmpPos.y += inPositions[i-1].y;
 
 					outPositions.Add(tmpPos);
+					outMultipliers.Add((multPrev + multCurr) * 0.5f);
 
 					i++;
 				}
 				else
 				{
 					outPositions.Add(inPositions[i-1]);
+					outMultipliers.Add(multPrev);
 				}
 			}
 
 			if (!isClosed)
 			{
 				outPositions.Add(inPositions[inPositions.Length-1]);
+				outMultipliers.Add(pointListProperties.GetThicknessMultiplier(inPositions.Length-1));
 			}
 			else
 			{
@@ -270,7 +309,11 @@ namespace ThisOtherThing.UI.ShapeUtils
 
 				sqrDistance = tmpPos.x * tmpPos.x + tmpPos.y * tmpPos.y;
 
-				if (sqrDistance < minSqrDistance)
+				float multFirst = pointListProperties.GetThicknessMultiplier(0);
+				float multLast = pointListProperties.GetThicknessMultiplier(inPositions.Length-1);
+				bool closedMultipliersMatch = Mathf.Approximately(multFirst, multLast);
+
+				if (sqrDistance < minSqrDistance && closedMultipliersMatch)
 				{
 					tmpPos.x *= 0.5f;
 					tmpPos.x += inPositions[0].x;
@@ -279,10 +322,12 @@ namespace ThisOtherThing.UI.ShapeUtils
 					tmpPos.y += inPositions[0].y;
 
 					outPositions[0] = tmpPos;
+					outMultipliers[0] = (multFirst + multLast) * 0.5f;
 				}
 				else
 				{
 					outPositions.Add(inPositions[inPositions.Length-1]);
+					outMultipliers.Add(multLast);
 				}
 			}
 		}
@@ -293,7 +338,7 @@ namespace ThisOtherThing.UI.ShapeUtils
 			Vector2 position,
 			Vector2 nextPosition,
 			PointListProperties pointListProperties,
-			int index
+			float multiplier
 		) {
 			tmpBackV.x = prevPosition.x - position.x;
 			tmpBackV.y = prevPosition.y - position.y;
@@ -310,8 +355,12 @@ namespace ThisOtherThing.UI.ShapeUtils
 			float cos = (tmpBackNormV.x * tmpForwNormV.x + tmpBackNormV.y * tmpForwNormV.y);
 			float angle = Mathf.Acos(cos);
 
-			// ignore points along straight line
-			if (cos <= -0.9999f)
+			// ignore points along straight line, unless they have a distinct thickness multiplier
+			// that needs to be preserved
+			float prevMultiplier = (lineData.ThicknessMultipliers.Count > 0) ? lineData.ThicknessMultipliers[lineData.ThicknessMultipliers.Count - 1] : 1.0f;
+			bool multipliersMatch = Mathf.Approximately(prevMultiplier, multiplier);
+
+			if (cos <= -0.9999f && multipliersMatch)
 				return;
 
 			if (pointListProperties.RoundingDistance > 0.0f)
@@ -323,7 +372,8 @@ namespace ThisOtherThing.UI.ShapeUtils
 					tmpForwNormV,
 					pointListProperties,
 					angle,
-					Mathf.Min(backLength, forwLength) * 0.49f
+					Mathf.Min(backLength, forwLength) * 0.49f,
+					multiplier
 				);
 			}
 			else
@@ -331,11 +381,14 @@ namespace ThisOtherThing.UI.ShapeUtils
 				if (angle < pointListProperties.MaxAngle)
 				{
 					lineData.Positions.Add(position + tmpBackNormV * 0.5f);
+					lineData.ThicknessMultipliers.Add(multiplier);
 					lineData.Positions.Add(position + tmpForwNormV * 0.5f);
+					lineData.ThicknessMultipliers.Add(multiplier);
 				}
 				else
 				{
 					lineData.Positions.Add(position);
+					lineData.ThicknessMultipliers.Add(multiplier);
 				}
 			}
 		}
@@ -347,7 +400,8 @@ namespace ThisOtherThing.UI.ShapeUtils
 			Vector2 forwNormV,
 			PointListProperties pointListProperties,
 			float angle,
-			float maxDistance
+			float maxDistance,
+			float multiplier
 		) {
 			float roundingDistance = Mathf.Min(maxDistance, pointListProperties.RoundingDistance);
 
@@ -385,6 +439,7 @@ namespace ThisOtherThing.UI.ShapeUtils
 				);
 
 				lineData.Positions.Add(tmpPos);
+				lineData.ThicknessMultipliers.Add(multiplier);
 			}
 		}
 
